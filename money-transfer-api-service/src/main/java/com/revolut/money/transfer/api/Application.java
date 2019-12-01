@@ -28,7 +28,7 @@ import static io.javalin.apibuilder.ApiBuilder.post;
 
 public class Application {
 
-    private static final String CONTEXT_PATH = "api/money/transfer";
+    private static final String CONTEXT_PATH = "/api/money/transfer";
 
     public static void main(String[] args) {
 
