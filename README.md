@@ -1,6 +1,13 @@
 # Money Transfer API
 A Java RESTful API for money transfers between users accounts
 
+### Technologies
+- Javalin
+- Jetty Container
+- Fuel HTTP
+- In Memory data base (for Demo app)
+- slf4j logger
+
 ## How to use
 
 ```
