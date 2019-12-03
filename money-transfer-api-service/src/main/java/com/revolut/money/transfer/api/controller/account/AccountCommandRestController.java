@@ -43,7 +43,7 @@ public class AccountCommandRestController {
         Account accountCreated = transformer.toAccountDomain(accountRequest);
 
         accountCommandService.createAccount(accountCreated);
-        context.status(HttpStatus.OK_200).json(
+        context.status(HttpStatus.CREATED_201).json(
                 transformer.toAccountResponse(accountCreated, site, language));
     }
 }

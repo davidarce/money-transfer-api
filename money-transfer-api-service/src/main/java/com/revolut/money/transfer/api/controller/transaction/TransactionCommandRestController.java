@@ -43,7 +43,7 @@ public class TransactionCommandRestController {
         Transaction transaction = transformer.toTransactionDomain(transactionRequest);
         transactionCommandService.createTransaction(transaction);
 
-        context.status(HttpStatus.OK_200).json(
+        context.status(HttpStatus.CREATED_201).json(
                 transformer.toTransactionResponse(transaction, site, language));
     }
 }
