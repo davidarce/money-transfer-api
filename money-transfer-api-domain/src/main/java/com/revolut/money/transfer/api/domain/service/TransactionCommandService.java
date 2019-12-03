@@ -30,18 +30,22 @@ public class TransactionCommandService {
     }
 
     public void createTransaction(Transaction transaction) {
-        LOG.info("Transaction with id {} accounts [{} - {}] STARTED {}", transaction.getId(), transaction.getOrigin(),
-                transaction.getDestination(), Thread.currentThread().getId());
+        LOG.info("Transaction with id {} - STARTED {}", transaction.getId(), Thread.currentThread().getId());
+
         while (TransactionStatus.PROCESSING.equals(transaction.getStatus())) {
-            beginTransaction(transaction);
+            validateTransaction(transaction);
+
             Account originAccount = getAccount(transaction.getOrigin());
             Account destinationAccount = getAccount(transaction.getDestination());
 
             if (originAccount.getLock().tryLock()) {
                 try {
                     if (destinationAccount.getLock().tryLock()) {
-                        createTransfer(originAccount, destinationAccount, transaction);
-                        destinationAccount.getLock().unlock();
+                        try {
+                            createTransfer(originAccount, destinationAccount, transaction);
+                        } finally {
+                            destinationAccount.getLock().unlock();
+                        }
                     }
                 } finally {
                     originAccount.getLock().unlock();
@@ -52,29 +56,34 @@ public class TransactionCommandService {
                 transaction.getDestination(), Thread.currentThread().getId());
     }
 
-    private synchronized void beginTransaction(Transaction transaction) {
+    private synchronized void validateTransaction(Transaction transaction) {
+        beginTransaction(transaction);
+        getAccount(transaction.getOrigin());
+        getAccount(transaction.getDestination());
+    }
+
+    private void beginTransaction(Transaction transaction) {
         Account origin = getAccount(transaction.getOrigin());
         Account destination = getAccount(transaction.getDestination());
         validateCurrencyAccounts(origin.getFunds().getCurrency(), destination.getFunds().getCurrency());
         validateFunds(transaction, origin);
     }
 
-    private synchronized Account getAccount(final String number) {
+    private Account getAccount(final String number) {
         return accountRepository.findByNumber(number)
                 .orElseThrow(() -> new AccountNotFoundException(number));
     }
 
     private synchronized void createTransfer(Account origin, Account destination, Transaction transaction) {
         try {
-            TimeUnit.MILLISECONDS.sleep((long)(Math.random() * 1000 + 2000));
+            TimeUnit.MILLISECONDS.sleep((long) (Math.random() * 1000));
+            subtractFunds(origin, transaction.getAmount());
+            depositFunds(destination, transaction.getAmount());
+            transaction.setStatus(TransactionStatus.CREATED);
+            transactionRepository.create(transaction);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         }
-
-        subtractFunds(origin, transaction.getAmount());
-        depositFunds(destination, transaction.getAmount());
-        transaction.setStatus(TransactionStatus.CREATED);
-        transactionRepository.create(transaction);
     }
 
     private void subtractFunds(Account origin, MonetaryAmount amount) {

@@ -23,24 +23,27 @@ public class TransactionRequest implements Serializable {
         return origin;
     }
 
-    public void setOrigin(String origin) {
+    public TransactionRequest setOrigin(String origin) {
         this.origin = origin;
+        return this;
     }
 
     public String getDestination() {
         return destination;
     }
 
-    public void setDestination(String destination) {
+    public TransactionRequest setDestination(String destination) {
         this.destination = destination;
+        return this;
     }
 
     public MoneyRequest getAmount() {
         return amount;
     }
 
-    public void setAmount(MoneyRequest amount) {
+    public TransactionRequest setAmount(MoneyRequest amount) {
         this.amount = amount;
+        return this;
     }
 
     @Override

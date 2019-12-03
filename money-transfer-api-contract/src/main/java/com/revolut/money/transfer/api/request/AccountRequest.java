@@ -26,16 +26,18 @@ public class AccountRequest implements Serializable {
         return owner;
     }
 
-    public void setOwner(String owner) {
+    public AccountRequest setOwner(String owner) {
         this.owner = owner;
+        return this;
     }
 
     public MoneyRequest getFunds() {
         return funds;
     }
 
-    public void setFunds(MoneyRequest funds) {
+    public AccountRequest setFunds(MoneyRequest funds) {
         this.funds = funds;
+        return this;
     }
 
     @Override

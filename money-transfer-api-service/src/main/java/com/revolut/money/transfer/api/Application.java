@@ -1,5 +1,9 @@
 package com.revolut.money.transfer.api;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.revolut.money.transfer.api.configuration.ExceptionController;
@@ -12,6 +16,7 @@ import com.revolut.money.transfer.api.controller.transaction.TransactionCommandR
 import com.revolut.money.transfer.api.controller.transaction.TransactionQueryRestController;
 import com.revolut.money.transfer.api.domain.exception.RevolutException;
 import io.javalin.Javalin;
+import io.javalin.plugin.json.JavalinJackson;
 import io.javalin.plugin.json.JavalinJson;
 import io.javalin.plugin.openapi.InitialConfigurationCreator;
 import io.javalin.plugin.openapi.OpenApiOptions;
@@ -31,52 +36,66 @@ public class Application {
     private static final String CONTEXT_PATH = "/api/money/transfer";
 
     public static void main(String[] args) {
-
-        final ApplicationComponent component = DaggerApplicationComponent.create();
-
-        final ExceptionController exceptionController = component.exceptionController();
-        final AccountQueryRestController accountQueryRestController = component.accountQueryRestController();
-        final AccountCommandRestController accountCommandRestController = component.accountCommandRestController();
-        final TransactionQueryRestController transactionQueryRestController = component.transactionQueryRestController();
-        final TransactionCommandRestController transactionCommandRestController = component.transactionCommandRestController();
-
-        Gson gson = new GsonBuilder().create();
-        JavalinJson.setFromJsonMapper(gson::fromJson);
-        JavalinJson.setToJsonMapper(gson::toJson);
-
-        Javalin app = Javalin.create(config -> {
-            config.contextPath = CONTEXT_PATH;
-            config.requestLogger(new RequestLogger()::log);
-            config.registerPlugin(new OpenApiPlugin(new OpenApiOptions(initialConfiguration())
-                    .path("/documentation")
-                    .toJsonMapper(JacksonToJsonMapper.INSTANCE)
-                    .activateAnnotationScanningFor("com.revolut.money.transfer.api")));
-        }).start(8080);
-
-        app.routes(() -> {
-            path("/accounts", () -> {
-                get(accountQueryRestController::getAll);
-                post(accountCommandRestController::create);
-                path(":number", () -> get(accountQueryRestController::getByNumber));
-            });
-
-            path("/transactions", () -> {
-                get(transactionQueryRestController::getAll);
-                post(transactionCommandRestController::create);
-                path(":id", () -> get(transactionQueryRestController::getById));
-            });
-        });
-
-        app.exception(Exception.class, exceptionController::handleGeneralExceptions)
-                .exception(IllegalArgumentException.class, exceptionController::handleIllegalArgumentException)
-                .exception(RevolutException.class, exceptionController::handleRevolutExceptions)
-                .exception(UnknownCurrencyException.class, exceptionController::handleUnknownCurrencyException);
-
+        JavalinApp.init();
     }
 
-    private static InitialConfigurationCreator initialConfiguration() {
-        return () -> new OpenAPI().info(new Info()
-                        .version("1.0")
-                        .description("Revolut Money transfer API"));
+    public static class  JavalinApp {
+
+        public static Javalin init() {
+            final ApplicationComponent component = DaggerApplicationComponent.create();
+
+            final ExceptionController exceptionController = component.exceptionController();
+            final AccountQueryRestController accountQueryRestController = component.accountQueryRestController();
+            final AccountCommandRestController accountCommandRestController = component.accountCommandRestController();
+            final TransactionQueryRestController transactionQueryRestController = component.transactionQueryRestController();
+            final TransactionCommandRestController transactionCommandRestController = component.transactionCommandRestController();
+
+            Gson gson = new GsonBuilder().create();
+            JavalinJson.setFromJsonMapper(gson::fromJson);
+            JavalinJson.setToJsonMapper(gson::toJson);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            objectMapper.registerModule(new JavaTimeModule());
+
+            JavalinJackson.configure(objectMapper);
+
+            Javalin app = Javalin.create(config -> {
+                config.contextPath = CONTEXT_PATH;
+                config.requestLogger(new RequestLogger()::log);
+                config.registerPlugin(new OpenApiPlugin(new OpenApiOptions(initialConfiguration())
+                        .path("/documentation")
+                        .toJsonMapper(JacksonToJsonMapper.INSTANCE)
+                        .activateAnnotationScanningFor("com.revolut.money.transfer.api")));
+            }).start(8080);
+
+            app.routes(() -> {
+                path("/accounts", () -> {
+                    get(accountQueryRestController::getAll);
+                    post(accountCommandRestController::create);
+                    path(":number", () -> get(accountQueryRestController::getByNumber));
+                });
+
+                path("/transactions", () -> {
+                    get(transactionQueryRestController::getAll);
+                    post(transactionCommandRestController::create);
+                    path(":id", () -> get(transactionQueryRestController::getById));
+                });
+            });
+
+            app.exception(Exception.class, exceptionController::handleGeneralExceptions)
+                    .exception(IllegalArgumentException.class, exceptionController::handleIllegalArgumentException)
+                    .exception(RevolutException.class, exceptionController::handleRevolutExceptions)
+                    .exception(UnknownCurrencyException.class, exceptionController::handleUnknownCurrencyException);
+
+            return app;
+        }
+
+        private static InitialConfigurationCreator initialConfiguration() {
+            return () -> new OpenAPI().info(new Info()
+                    .version("1.0")
+                    .description("Revolut Money transfer API"));
+        }
     }
 }

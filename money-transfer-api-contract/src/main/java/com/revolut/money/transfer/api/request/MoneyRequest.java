@@ -20,16 +20,18 @@ public class MoneyRequest implements Serializable {
         return currency;
     }
 
-    public void setCurrency(String currency) {
+    public MoneyRequest setCurrency(String currency) {
         this.currency = currency;
+        return this;
     }
 
     public String getValue() {
         return value;
     }
 
-    public void setValue(String value) {
+    public MoneyRequest setValue(String value) {
         this.value = value;
+        return this;
     }
 
     @Override
